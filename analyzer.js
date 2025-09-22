@@ -26,10 +26,14 @@ async function getPackageInfo() {
       ...packageData.devDependencies,
     };
 
-    const vetsourceLibraries = {};
+    const vetsourceLibraries = []; // <-- CAMBIO: De objeto {} a array []
     for (const libName in allDependencies) {
       if (libName.startsWith("@vetsource/")) {
-        vetsourceLibraries[libName] = allDependencies[libName];
+        // --- CAMBIO: A&ntilde;adimos un objeto al array ---
+        vetsourceLibraries.push({
+          nameLibrary: libName,
+          versionLibrary: allDependencies[libName],
+        });
       }
     }
 
