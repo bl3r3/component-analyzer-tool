@@ -1,11 +1,10 @@
-import { promises as fs } from "fs"; // Importamos la versi&oacute;n de promesas como 'fs'
+import { promises as fs } from "fs";
 import path from "path";
 import { sync as globSync } from "glob";
 import { parse } from "@babel/parser";
 import _traverse from "@babel/traverse";
 const traverse = _traverse.default;
 
-// --- CONFIGURACIÓN ---
 const PROJECT_DIR = ".";
 const LIBRARIES_TO_TRACK = ["@vetsource/kibble", "@mui/material"];
 const packageJsonPath = path.resolve(process.cwd(), "package.json");
@@ -13,11 +12,9 @@ const packageJsonPath = path.resolve(process.cwd(), "package.json");
 const stats = {};
 LIBRARIES_TO_TRACK.forEach((lib) => (stats[lib] = {}));
 
-// --- LÓGICA 1: OBTENER INFO DEL PACKAGE.JSON ---
-// (Esta funci&oacute;n ya era async y estaba correcta)
 async function getPackageInfo() {
   try {
-    const fileContent = await fs.readFile(packageJsonPath, "utf-8"); // Correcto: usa await
+    const fileContent = await fs.readFile(packageJsonPath, "utf-8");
     const packageData = JSON.parse(fileContent);
     const projectName = packageData.name;
 
@@ -26,10 +23,9 @@ async function getPackageInfo() {
       ...packageData.devDependencies,
     };
 
-    const vetsourceLibraries = []; // <-- CAMBIO: De objeto {} a array []
+    const vetsourceLibraries = [];
     for (const libName in allDependencies) {
       if (libName.startsWith("@vetsource/")) {
-        // --- CAMBIO: A&ntilde;adimos un objeto al array ---
         vetsourceLibraries.push({
           nameLibrary: libName,
           versionLibrary: allDependencies[libName],
@@ -47,9 +43,6 @@ async function getPackageInfo() {
   }
 }
 
-// --- LÓGICA 2: ANÁLISIS DE COMPONENTES (AST) ---
-
-// -- CAMBIO: La funci&oacute;n ahora es 'async'
 async function analyzeCode() {
   const filePaths = globSync(`${PROJECT_DIR}/**/*.{js,jsx,ts,tsx}`, {
     ignore: [
@@ -63,10 +56,8 @@ async function analyzeCode() {
   });
   console.log(`Analizando ${filePaths.length} archivos válidos...`);
 
-  // -- CAMBIO: Usamos 'for...of' para poder usar 'await' dentro del bucle
   for (const filePath of filePaths) {
     try {
-      // -- CAMBIO: De 'fs.readFileSync' a 'await fs.readFile'
       const content = await fs.readFile(filePath, "utf-8");
       const ast = parse(content, {
         sourceType: "module",
@@ -76,7 +67,6 @@ async function analyzeCode() {
 
       traverse(ast, {
         ImportDeclaration(path) {
-          // ... (l&oacute;gica interna sin cambios)
           const libName = path.node.source.value;
           if (LIBRARIES_TO_TRACK.includes(libName)) {
             path.node.specifiers.forEach((specifier) => {
@@ -101,7 +91,6 @@ async function analyzeCode() {
           }
         },
         JSXOpeningElement(path) {
-          // ... (l&oacute;gica interna sin cambios)
           const nodeName = path.node.name.name;
           if (localImports[nodeName]) {
             const { lib, original } = localImports[nodeName];
@@ -118,10 +107,7 @@ async function analyzeCode() {
   console.log("Análisis de componentes completado.");
 }
 
-// --- LÓGICA 3: GENERACIÓN DE REPORTES ---
-
 function generateComponentArray(report) {
-  // ... (l&oacute;gica interna sin cambios)
   const payload = [];
   Object.keys(report).forEach((lib) => {
     Object.keys(report[lib]).forEach((componentName) => {
@@ -139,7 +125,6 @@ function generateComponentArray(report) {
   return payload;
 }
 
-// -- CAMBIO: La funci&oacute;n ahora es 'async'
 async function generateSheet(componentStats) {
   let csvContent = "Library,Component,ImportCount,UsageCount,isUsed,Files\n";
   const componentArray = generateComponentArray(componentStats);
@@ -150,7 +135,6 @@ async function generateSheet(componentStats) {
   });
 
   try {
-    // -- CAMBIO: De 'fs.writeFileSync' a 'await fs.writeFile'
     await fs.writeFile("component_report.csv", csvContent, "utf-8");
     console.log('Reporte "component_report.csv" generado con éxito.');
   } catch (error) {
@@ -158,16 +142,11 @@ async function generateSheet(componentStats) {
   }
 }
 
-// --- EJECUCIÓN PRINCIPAL ---
-
-// (Esta funci&oacute;n ya era 'async')
 async function main() {
   const packageInfo = await getPackageInfo();
 
-  // -- CAMBIO: A&ntilde;adimos 'await'
   await analyzeCode();
 
-  // -- CAMBIO: A&ntilde;adimos 'await'
   await generateSheet(stats);
 
   const finalPayload = {
@@ -176,7 +155,6 @@ async function main() {
   };
 
   try {
-    // -- CAMBIO: De 'fs.writeFileSync' a 'await fs.writeFile'
     await fs.writeFile(
       "report.json",
       JSON.stringify(finalPayload, null, 2),
@@ -190,5 +168,4 @@ async function main() {
   console.log(JSON.stringify(finalPayload, null, 2));
 }
 
-// Iniciar el script
 main();
